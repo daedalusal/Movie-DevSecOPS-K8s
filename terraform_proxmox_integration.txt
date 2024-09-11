@@ -1,0 +1,117 @@
+
+# Terraform and Proxmox Integration for IaC
+
+## 1. Install Terraform
+First, you need to install Terraform on your local machine or directly on the Proxmox VM.
+
+```bash
+# Download Terraform
+wget https://releases.hashicorp.com/terraform/<VERSION>/terraform_<VERSION>_linux_amd64.zip
+
+# Unzip the package
+unzip terraform_<VERSION>_linux_amd64.zip
+
+# Move it to a directory in your PATH
+sudo mv terraform /usr/local/bin/
+
+# Verify installation
+terraform -v
+```
+
+## 2. Set Up Proxmox Provider in Terraform
+Terraform uses providers to interact with various services. For Proxmox, you need to configure the Proxmox provider. Here's a basic Terraform setup to manage your Proxmox VMs.
+
+### Step 1: Install Proxmox Provider Plugin
+Create a new directory for your Terraform configuration, and initialize the Proxmox provider:
+
+```bash
+mkdir terraform-proxmox
+cd terraform-proxmox
+
+# Initialize terraform
+terraform init
+```
+
+### Step 2: Create a Terraform Configuration File
+Create a `main.tf` file where you define your infrastructure, including Proxmox VMs. Here's an example configuration:
+
+```hcl
+provider "proxmox" {
+  pm_api_url      = "https://<proxmox-host>:8006/api2/json"
+  pm_user         = "root@pam"
+  pm_password     = "<your-password>"
+  pm_tls_insecure = true
+}
+
+# Define a Proxmox VM resource
+resource "proxmox_vm_qemu" "my_vm" {
+  name       = "devsecops-vm"
+  target_node = "<node-name>"
+
+  # VM Configurations
+  clone           = "<template-name>"
+  os_type         = "cloud-init"
+  cores           = 2
+  memory          = 2048
+  disk {
+    size = "30G"
+  }
+  network {
+    model = "virtio"
+  }
+
+  # Cloud-init configuration
+  ipconfig0 = "ip=192.168.1.100/24,gw=192.168.1.1"
+  sshkeys = file("~/.ssh/id_rsa.pub")
+}
+```
+
+### Step 3: Run Terraform Commands
+After defining your infrastructure, use Terraform to apply the configuration:
+
+1. Initialize the Terraform configuration:
+```bash
+terraform init
+```
+
+2. Preview the changes Terraform will make:
+```bash
+terraform plan
+```
+
+3. Apply the configuration to create the VM on Proxmox:
+```bash
+terraform apply
+```
+
+## 3. Benefits of Using Terraform with Proxmox
+- **Automated VM Deployment**: Automate the creation and management of your Proxmox VMs, which reduces manual errors.
+- **Version Control**: Store your Terraform configurations in version control (e.g., Git), making your infrastructure reproducible and trackable.
+- **Consistency**: Ensures the same configurations are applied every time you deploy or make changes.
+
+## 4. Advanced Use Cases
+- **Provisioning Multiple VMs**: You can use Terraform’s iteration capabilities to create multiple VMs dynamically.
+- **Modules**: Organize complex infrastructure using Terraform modules for reusable and modular components.
+- **Networking and Storage**: You can also manage networking, storage, and other resources on Proxmox with Terraform.
+
+## Example Terraform Module for Proxmox VMs
+If you plan to manage multiple VMs, consider creating a Terraform module to handle VM creation:
+
+```hcl
+module "proxmox_vm" {
+  source  = "./modules/proxmox-vm"
+  vm_name = "devsecops-node"
+  memory  = 4096
+  cores   = 4
+  disk_size = "50G"
+  ip_address = "192.168.1.110"
+  ssh_key = file("~/.ssh/id_rsa.pub")
+}
+```
+
+## 5. Terraform + Ansible
+You can also combine Terraform with **Ansible** for further automation:
+- Use Terraform to provision VMs.
+- Use Ansible to configure the software and applications within those VMs.
+
+With Terraform, you can achieve full infrastructure automation on Proxmox, enabling more effective infrastructure management while focusing on scalability and repeatability.
